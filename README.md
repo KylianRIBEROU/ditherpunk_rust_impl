@@ -12,6 +12,14 @@ LAVENANT Jordan - RIBEROU Kylian - BUT 3
 
 # Lancement
 
+Build
+
+```bash
+cargo build
+```
+
+Importer une image
+
 ```bash
 # Importer une image avec le mode seuil
 cargo run -- ./imports/test.jpg seuil
