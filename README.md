@@ -2,9 +2,46 @@
 
 LAVENANT Jordan - RIBEROU Kylian - BUT 3
 
+# Pré-requis
+
 > Traitement 1, 2, 3, 4 **OBLIGATOIRE**
 
 > Faire les traitements 5, 6, 7 **pour améliorer la note**
+
+> Librairie **ARGH**: les triples `/` permettent de guider l'utilisateur à utiliser l'application en CLI (grâce à la commande cargo run -- --help)
+
+# Lancement
+
+```bash
+# Importer une image avec le mode seuil
+cargo run -- ./imports/test.jpg seuil
+```
+
+```bash
+# Importer une image avec le mode palette (fournir l'argument supplémentaire)
+cargo run -- ./imports/test.jpg palette --n-couleurs 5
+```
+
+# Questions
+
+## Question 2
+
+- Pour ouvrir une image depuis un fichier, on utilise :
+
+```bash
+cargo run -- ./imports/test.jpg
+```
+
+- On obtient un DynamicImage, à quoi correspond ce type?
+
+- Comment obtenir une image en mode rbg8
+
+Une image arbitraire peut avoir des pixels de nature différente:
+
+- avec un nombre variables de canaux (couleurs ou non, transparence ou non)
+- avec un type de donnée différent pour les canaux (entiers sur un octet, flottants ou autres)
+  Passer l’image d’entrée en mode rgb8, c’est-à-dire avec 3 canaux R, G, B, représentés chacun
+  par un u8.
 
 ## Question 3
 
@@ -38,3 +75,8 @@ expliquerez dans votre README le choix que vous avez fait dans ce cas._
 !['q13'](assets/q13.png)
 
 _Déterminer 𝐵3._
+
+## Question 17
+
+_Pour une palette de couleurs comme dans la partie 3, expliquer dans votre README comment
+vous représentez l’erreur commise à chaque pixel, comment vous la diffusez._
