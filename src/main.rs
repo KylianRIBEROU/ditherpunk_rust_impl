@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use image::io::Reader as ImageReader;
-use image::{DynamicImage, GenericImageView, ImageError, Pixel};
+use image::{DynamicImage, GenericImageView, ImageBuffer, ImageError, Pixel, RgbImage};
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
 /// Convertit une image en monochrome ou vers une palette réduite de couleurs.
@@ -24,6 +24,7 @@ enum Mode {
     Seuil(OptsSeuil),
     Palette(OptsPalette),
     Pixel(OptsPixel),
+    SplitWhite(OptsSplitWhite),
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
@@ -50,6 +51,11 @@ struct OptsPixel {
     y: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "split_white")]
+/// Rendu de l'image en alternant les pixels en blanc
+struct OptsSplitWhite {}
+
 // const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
 // const GREY: image::Rgb<u8> = image::Rgb([127, 127, 127]);
 // const BLACK: image::Rgb<u8> = image::Rgb([0, 0, 0]);
@@ -60,14 +66,33 @@ struct OptsPixel {
 // const MAGENTA: image::Rgb<u8> = image::Rgb([255, 0, 255]);
 // const CYAN: image::Rgb<u8> = image::Rgb([0, 255, 255]);
 
+fn save(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    img.save(path_out)?;
+    Ok(())
+}
+
 fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
     let pixel = img.get_pixel(x, y);
     let channels = pixel.channels();
     image::Rgb([channels[0], channels[1], channels[2]])
 }
 
-fn white_pixel() -> image::Rgb<u8> {
-    image::Rgb([255, 255, 255])
+fn split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            if (x + y) % 2 == 0 {
+                img_out.put_pixel(x, y, image::Rgb([255, 255, 255]));
+            } else {
+                img_out.put_pixel(x, y, img.get_pixel(x, y).to_rgb());
+            }
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
 }
 
 fn main() -> Result<(), ImageError> {
@@ -97,6 +122,10 @@ fn main() -> Result<(), ImageError> {
                 "Couleur du pixel à la position ({}, {}): {:?}",
                 opts.x, opts.y, pixel_color
             );
+        }
+        Mode::SplitWhite(_) => {
+            println!("Mode split white");
+            split_white(&img, path_out)?;
         }
     }
 

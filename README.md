@@ -166,6 +166,26 @@ Affichage de la couleur du pixel (32, 52) :
 
 _Passer un pixel sur deux d’une image en blanc. Est-ce que l’image obtenue est reconnaissable?_
 
+```rust
+fn split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let mut img_white = img.clone();
+    let (width, height) = img.dimensions();
+
+    for x in (0..width).step_by(2) {
+        for y in (0..height).step_by(2) {
+            img_white.put_pixel(x, y, image::Rgb([255, 255, 255]));
+        }
+    }
+
+    img_white.save(path_out)?;
+    Ok(())
+}
+```
+
+Résultat de l'image obtenue :
+
+!['question5'](exports/split_white.png)
+
 ## Question 6
 
 _Comment récupérer la luminosité d’un pixel?_
