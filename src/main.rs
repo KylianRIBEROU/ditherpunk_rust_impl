@@ -44,8 +44,9 @@ struct OptsPalette {
 #[argh(subcommand, name = "pixel")]
 /// Affiche la couleur du pixel à la position (x, y)
 struct OptsPixel {
-    #[argh(option)]
+    #[argh(option, description = "coordonnées x du pixel")]
     x: usize,
+    #[argh(option, description = "coordonnées y du pixel")]
     y: usize,
 }
 
@@ -68,6 +69,10 @@ fn main() -> Result<(), ImageError> {
     println!("path_in: {}", path_in);
     println!("path_out: {}", path_out);
 
+    // Lire l'image
+    let img: DynamicImage = ImageReader::open(path_in)?.decode()?;
+    println!("Dimensions: {:?}", img.dimensions());
+
     match mode {
         Mode::Seuil(_) => {
             println!("Mode seuil");
@@ -77,15 +82,9 @@ fn main() -> Result<(), ImageError> {
         }
         Mode::Pixel(opts) => {
             println!("Mode pixel: ({}, {})", opts.x, opts.y);
+            println!("Pixel: {:?}", img.get_pixel(opts.x as u32, opts.y as u32));
         }
     }
-
-    // Lire l'image
-    let img: DynamicImage = ImageReader::open(path_in)?.decode()?;
-    println!("Dimensions: {:?}", img.dimensions());
-
-    let pixel_color = img.get_pixel(32, 52);
-    println!("Pixel color: {:?}", pixel_color);
 
     Ok(())
 }

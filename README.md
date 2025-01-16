@@ -92,6 +92,48 @@ Si l'image de départ avait un canal alpha, la méthode `to_rgb8()` de `DynamicI
 
 _Afficher dans le terminal la couleur du pixel (32,52) de l’image de votre choix._
 
+Pour cette question, nous avons créer un nouveau mode de traitement `pixel`, prenant des sous-paramètres `x` et `y` pour déterminer les coordonnées du pixel à afficher.
+
+```rust
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand)]
+enum Mode {
+    Seuil(OptsSeuil),
+    Palette(OptsPalette),
+    Pixel(OptsPixel),
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "pixel")]
+/// Affiche la couleur du pixel à la position (x, y)
+struct OptsPixel {
+    #[argh(option, description = "coordonnées x du pixel")]
+    x: usize,
+    #[argh(option, description = "coordonnées y du pixel")]
+    y: usize,
+}
+```
+
+```rust
+match mode {
+    Mode::Seuil(_) => {
+        println!("Mode seuil");
+    }
+    Mode::Palette(opts) => {
+        println!("Mode palette: {:?}", opts.n_couleurs);
+    }
+    Mode::Pixel(opts) => {
+        println!("Mode pixel: ({}, {})", opts.x, opts.y);
+        println!("Pixel: {:?}", img.get_pixel(opts.x as u32, opts.y as u32));
+    }
+}
+```
+
+Affichage de la couleur du pixel (32, 52) :
+
+!['question4'](assets/question4.png)
+
+
 ## Question 5
 
 _Passer un pixel sur deux d’une image en blanc. Est-ce que l’image obtenue est reconnaissable?_
