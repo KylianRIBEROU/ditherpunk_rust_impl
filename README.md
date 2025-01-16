@@ -32,6 +32,22 @@ cargo run -- ./imports/test.jpg palette --n-couleurs 5
 
 # Questions
 
+## Question 1
+
+Création d'un nouveau projet Cargo :
+```toml
+[package]
+name = "ditherpunk"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+image = "0.24.9"
+argh = "0.1.13"
+```
+
 ## Question 2
 
 - Pour ouvrir une image depuis un fichier, on utilise :
@@ -157,6 +173,12 @@ fn main() -> Result<(), ImageError> {
 }
 ```
 
+Instructions pour afficher la couleur du pixel (32, 52) :
+
+```bash
+cargo run -- ./imports/test.jpg pixel --x 32 --y 52
+```
+
 Affichage de la couleur du pixel (32, 52) :
 
 !['question4'](assets/question4.png)
@@ -166,20 +188,32 @@ Affichage de la couleur du pixel (32, 52) :
 
 _Passer un pixel sur deux d’une image en blanc. Est-ce que l’image obtenue est reconnaissable?_
 
-```rust
-fn split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let mut img_white = img.clone();
-    let (width, height) = img.dimensions();
+Traitement : 
 
-    for x in (0..width).step_by(2) {
-        for y in (0..height).step_by(2) {
-            img_white.put_pixel(x, y, image::Rgb([255, 255, 255]));
+```rust
+fn traitement_split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            if (x + y) % 2 == 0 {
+                img_out.put_pixel(x, y, image::Rgb([255, 255, 255]));
+            } else {
+                img_out.put_pixel(x, y, img.get_pixel(x, y).to_rgb());
+            }
         }
     }
 
-    img_white.save(path_out)?;
-    Ok(())
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
 }
+```
+
+Instructions pour passer un pixel sur deux en blanc :
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/split_white.png split_white
 ```
 
 Résultat de l'image obtenue :
@@ -189,6 +223,63 @@ Résultat de l'image obtenue :
 ## Question 6
 
 _Comment récupérer la luminosité d’un pixel?_
+
+D'après la formule de luminance, la luminosité d'un pixel peut être calculée en multipliant les valeurs des canaux R, G, B par des coefficients de pondération reflétant la sensibilité de l'œil humain à ces couleurs. La luminosité est ensuite obtenue en sommant ces valeurs pondérées.
+
+Rouge : `0.2126`  
+Vert : `0.7152`  
+Bleu : `0.0722`  
+
+```rust
+fn get_light(pixel: image::Rgb<u8>) -> u8 {
+    let channels = pixel.channels();
+    let light = 0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
+    light as u8
+}
+```
+
+Ainsi, la luminosité d'un pixel est une valeur entre 0 et 255, où 0 représente le noir et 255 le blanc.
+
+## Question 7
+
+_Implémenter le traitement_
+
+Traitement : 
+
+```rust
+fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let light = get_light(pixel);
+            let new_pixel = if light > 127 {
+                image::Rgb([255, 255, 255])
+            } else {
+                image::Rgb([0, 0, 0])
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+```
+Instructions pour passer une image en monochrome selon la luminosité de ses pixels :
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/monochrome.png seuil
+```
+
+Résultat de l'image obtenue :
+
+!['question7'](exports/monochrome.png)
+
+## Question 8
+
 
 ## Question 9
 

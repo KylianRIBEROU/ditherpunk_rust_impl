@@ -77,7 +77,16 @@ fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
     image::Rgb([channels[0], channels[1], channels[2]])
 }
 
-fn split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+fn get_light(pixel: image::Rgb<u8>) -> u8 {
+    let channels = pixel.channels();
+    // ! d'après la formule de luminance
+    let light = 0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
+    light as u8
+}
+
+// Traitements
+
+fn traitement_split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
     let (width, height) = img.dimensions();
     let mut img_out: RgbImage = ImageBuffer::new(width, height);
 
@@ -95,6 +104,28 @@ fn split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
     save(&img_out, path_out)
 }
 
+fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let light = get_light(pixel);
+            let new_pixel = if light > 127 {
+                image::Rgb([255, 255, 255])
+            } else {
+                image::Rgb([0, 0, 0])
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+
+
 fn main() -> Result<(), ImageError> {
     let args: DitherArgs = argh::from_env();
     let path_in = args.input;
@@ -111,6 +142,7 @@ fn main() -> Result<(), ImageError> {
     match mode {
         Mode::Seuil(_) => {
             println!("Mode seuil");
+            traitement_monochrome(&img, path_out)?;
         }
         Mode::Palette(opts) => {
             println!("Mode palette: {:?}", opts.n_couleurs);
@@ -125,7 +157,7 @@ fn main() -> Result<(), ImageError> {
         }
         Mode::SplitWhite(_) => {
             println!("Mode split white");
-            split_white(&img, path_out)?;
+            traitement_split_white(&img, path_out)?;
         }
     }
 
