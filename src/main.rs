@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use image::io::Reader as ImageReader;
-use image::{GenericImageView, ImageError};
+use image::{DynamicImage, GenericImageView, ImageError};
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
 /// Convertit une image en monochrome ou vers une palette réduite de couleurs.
@@ -23,6 +23,7 @@ struct DitherArgs {
 enum Mode {
     Seuil(OptsSeuil),
     Palette(OptsPalette),
+    Pixel(OptsPixel),
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
@@ -37,6 +38,15 @@ struct OptsPalette {
     /// le nombre de couleurs à utiliser, dans la liste [NOIR, BLANC, ROUGE, VERT, BLEU, JAUNE, CYAN, MAGENTA]
     #[argh(option)]
     n_couleurs: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "pixel")]
+/// Affiche la couleur du pixel à la position (x, y)
+struct OptsPixel {
+    #[argh(option)]
+    x: usize,
+    y: usize,
 }
 
 // const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
@@ -65,10 +75,17 @@ fn main() -> Result<(), ImageError> {
         Mode::Palette(opts) => {
             println!("Mode palette: {:?}", opts.n_couleurs);
         }
+        Mode::Pixel(opts) => {
+            println!("Mode pixel: ({}, {})", opts.x, opts.y);
+        }
     }
 
     // Lire l'image
-    let img = ImageReader::open(path_in)?.decode()?;
-    println!("Image dimensions: {:?}", img.dimensions());
+    let img: DynamicImage = ImageReader::open(path_in)?.decode()?;
+    println!("Dimensions: {:?}", img.dimensions());
+
+    let pixel_color = img.get_pixel(32, 52);
+    println!("Pixel color: {:?}", pixel_color);
+
     Ok(())
 }

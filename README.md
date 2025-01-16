@@ -42,7 +42,17 @@ cargo run -- ./imports/test.jpg
 
 - On obtient un DynamicImage, à quoi correspond ce type?
 
+DynamicImage est un type de la bibliothèque Rust image, conçu pour gérer des images de formats variés (RGB, RGBA, Luma, etc.) et de types de données différents (entiers, flottants, etc.). Il simplifie la manipulation d'images en abstrahant leur format interne.
+
 - Comment obtenir une image en mode rbg8
+
+Pour convertir une image en mode `Rgb8` (3 canaux R, G, B, chacun représenté par un `u8`), utilisez la méthode `to_rgb8()` de `DynamicImage`.
+
+```rust
+// Lire l'image
+let img: DynamicImage = ImageReader::open(path_in)?.decode()?;
+let img_rgb8 = img.to_rgb8();
+```
 
 Une image arbitraire peut avoir des pixels de nature différente:
 
@@ -53,8 +63,30 @@ Une image arbitraire peut avoir des pixels de nature différente:
 
 ## Question 3
 
-_Sauver l’image obtenue au format png. Que se passe-t-il si l’image de départ avait un canal
+_Sauver l’image obtenue au format png._
+
+```rust
+let args: DitherArgs = argh::from_env();
+let path_in = args.input;
+let path_out = args.output.unwrap_or("./exports/default.png".to_string());
+
+// Lire l'image
+let img: DynamicImage = ImageReader::open(path_in)?.decode()?;
+let img_rgb8 = img.to_rgb8();
+
+// Sauvegarder l'image en mode Rgb8
+let rgb8_path = format!("{}_rgb8.png", path_out.trim_end_matches(".png"));
+img_rgb8.save(&rgb8_path)?;
+```
+
+Exportation de l'image : 
+
+!['question3_export'](assets/rgb8_export.png)
+
+_Que se passe-t-il si l’image de départ avait un canal
 alpha?_
+
+Si l'image de départ avait un canal alpha, la méthode `to_rgb8()` de `DynamicImage` supprime le canal alpha et ne conserve que les canaux R, G, B.
 
 ## Question 4
 
