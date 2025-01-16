@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use image::io::Reader as ImageReader;
-use image::{DynamicImage, GenericImageView, ImageError};
+use image::{DynamicImage, GenericImageView, ImageError, Pixel};
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
 /// Convertit une image en monochrome ou vers une palette réduite de couleurs.
@@ -60,6 +60,16 @@ struct OptsPixel {
 // const MAGENTA: image::Rgb<u8> = image::Rgb([255, 0, 255]);
 // const CYAN: image::Rgb<u8> = image::Rgb([0, 255, 255]);
 
+fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
+    let pixel = img.get_pixel(x, y);
+    let channels = pixel.channels();
+    image::Rgb([channels[0], channels[1], channels[2]])
+}
+
+fn white_pixel() -> image::Rgb<u8> {
+    image::Rgb([255, 255, 255])
+}
+
 fn main() -> Result<(), ImageError> {
     let args: DitherArgs = argh::from_env();
     let path_in = args.input;
@@ -82,7 +92,11 @@ fn main() -> Result<(), ImageError> {
         }
         Mode::Pixel(opts) => {
             println!("Mode pixel: ({}, {})", opts.x, opts.y);
-            println!("Pixel: {:?}", img.get_pixel(opts.x as u32, opts.y as u32));
+            let pixel_color = get_pixel(&img, opts.x as u32, opts.y as u32);
+            println!(
+                "Couleur du pixel à la position ({}, {}): {:?}",
+                opts.x, opts.y, pixel_color
+            );
         }
     }
 

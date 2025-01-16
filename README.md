@@ -114,18 +114,46 @@ struct OptsPixel {
 }
 ```
 
+Fonction de récupération de la couleur du pixel :
+
 ```rust
-match mode {
-    Mode::Seuil(_) => {
-        println!("Mode seuil");
+fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
+    let pixel = img.get_pixel(x, y);
+    let channels = pixel.channels();
+    image::Rgb([channels[0], channels[1], channels[2]])
+}
+
+fn main() -> Result<(), ImageError> {
+    let args: DitherArgs = argh::from_env();
+    let path_in = args.input;
+    let path_out = args.output.unwrap_or("./exports/default.png".to_string());
+    let mode = args.mode;
+
+    println!("path_in: {}", path_in);
+    println!("path_out: {}", path_out);
+
+    // Lire l'image
+    let img: DynamicImage = ImageReader::open(path_in)?.decode()?;
+    println!("Dimensions: {:?}", img.dimensions());
+
+    match mode {
+        Mode::Seuil(_) => {
+            println!("Mode seuil");
+        }
+        Mode::Palette(opts) => {
+            println!("Mode palette: {:?}", opts.n_couleurs);
+        }
+        Mode::Pixel(opts) => {
+            println!("Mode pixel: ({}, {})", opts.x, opts.y);
+            let pixel_color = get_pixel(&img, opts.x as u32, opts.y as u32);
+            println!(
+                "Couleur du pixel à la position ({}, {}): {:?}",
+                opts.x, opts.y, pixel_color
+            );
+        }
     }
-    Mode::Palette(opts) => {
-        println!("Mode palette: {:?}", opts.n_couleurs);
-    }
-    Mode::Pixel(opts) => {
-        println!("Mode pixel: ({}, {})", opts.x, opts.y);
-        println!("Pixel: {:?}", img.get_pixel(opts.x as u32, opts.y as u32));
-    }
+
+    Ok(())
 }
 ```
 
