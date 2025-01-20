@@ -280,11 +280,142 @@ Résultat de l'image obtenue :
 
 ## Question 8
 
+Traitement permettant de passer une paire (2) de couleur à une image, en fonction de sa luminosité :
+
+```rust
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "couleurs")]
+/// Rendu de l’image par seuillage avec des couleurs personnalisées.
+struct OptsCouleurs {
+    /// la première couleur (format: 'red' / 'grey' / 'blue' / 'green' / 'yellow' / 'magenta' / 'cyan')
+    #[argh(option)]
+    couleur1: String,
+
+    /// la seconde couleur (format: 'red' / 'grey' / 'blue' / 'green' / 'yellow' / 'magenta' / 'cyan')
+    #[argh(option)]
+    couleur2: String,
+}
+```
+
+```rust
+fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: String, couleur2: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    let couleur1 = match couleur1.as_str() {
+        "white" => WHITE,
+        "grey" => GREY,
+        "black" => BLACK,
+        "blue" => BLUE,
+        "red" => RED,
+        "green" => GREEN,
+        "yellow" => YELLOW,
+        "magenta" => MAGENTA,
+        "cyan" => CYAN,
+        _ => WHITE,
+    };
+
+    let couleur2 = match couleur2.as_str() {
+        "white" => WHITE,
+        "grey" => GREY,
+        "black" => BLACK,
+        "blue" => BLUE,
+        "red" => RED,
+        "green" => GREEN,
+        "yellow" => YELLOW,
+        "magenta" => MAGENTA,
+        "cyan" => CYAN,
+        _ => WHITE,
+    };
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let light = get_light(pixel);
+            let new_pixel = if light > 127 {
+                couleur1
+            } else {
+                couleur2
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+```
+
+Instructions pour passer une paire de palette de couleurs à une image, en fonction de sa luminosité : 
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/red_blue.png couleurs --couleur1 red --couleur2 blue
+```
+
+Résultat de l'image obtenue :
+
+> Red / Blue
+!['question8.0'](exports/red_blue.png)
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/magenta_yellow.png couleurs --couleur1 magenta --couleur2 yellow
+```
+
+> Magenta / Yellow
+!['question8.1'](exports/magenta_yellow.png)
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/cyan_green.png couleurs --couleur1 cyan --couleur2 green
+```
+
+> Cyan / Green
+!['question8.2'](exports/cyan_green.png)
+
 
 ## Question 9
 
 _Comment calculer la distance entre deux couleurs? Indiquer dans le README la méthode de
 calcul choisie._
+
+Pour calculer la distance entre deux couleurs, on peut utiliser la distance euclidienne. On peut donc sommer la distance entre chaque attributs R, G, et B, étant des nombres compris entre 0 et 255. On compare ensuite la distance entre chaque attribut de chaque couleur, puis nous conservons la distance la plus courte, et ainsi la couleur la plus proche.
+
+```rust
+fn get_closest_color(pixel: image::Rgb<u8>) -> image::Rgb<u8> {
+    // Check if the pixel is already in the palette to early return
+    if let Some(&color) = COLORS.iter().find(|&&c| c == pixel) {
+        return color;
+    }
+
+    let mut min_distance = f32::MAX;
+    let mut closest_color = COLORS[0];
+
+    for color in COLORS.iter() {
+        let distance = ((color[0] as f32 - pixel[0] as f32).powi(2)
+            + (color[1] as f32 - pixel[1] as f32).powi(2)
+            + (color[2] as f32 - pixel[2] as f32).powi(2))
+        .sqrt();
+
+        if distance < min_distance {
+            min_distance = distance;
+            closest_color = *color;
+        }
+    }
+
+    closest_color
+}
+```
+
+> On peut ensuite optimiser cette fonction en vérifiant si le pixel passé en paramètre est directement dans la palette, pour éviter de parcourir la palette entière à chaque fois.
+
+## Question 10
+
+_Implémenter le traitement_
+
+Traitement : 
+
+```rust
+
+```
 
 ## Question 11
 
@@ -301,3 +432,4 @@ _Déterminer 𝐵3._
 
 _Pour une palette de couleurs comme dans la partie 3, expliquer dans votre README comment
 vous représentez l’erreur commise à chaque pixel, comment vous la diffusez._
+

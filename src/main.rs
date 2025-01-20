@@ -25,6 +25,7 @@ enum Mode {
     Palette(OptsPalette),
     Pixel(OptsPixel),
     SplitWhite(OptsSplitWhite),
+    Couleurs(OptsCouleurs),
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
@@ -56,15 +57,33 @@ struct OptsPixel {
 /// Rendu de l'image en alternant les pixels en blanc
 struct OptsSplitWhite {}
 
-// const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
-// const GREY: image::Rgb<u8> = image::Rgb([127, 127, 127]);
-// const BLACK: image::Rgb<u8> = image::Rgb([0, 0, 0]);
-// const BLUE: image::Rgb<u8> = image::Rgb([0, 0, 255]);
-// const RED: image::Rgb<u8> = image::Rgb([255, 0, 0]);
-// const GREEN: image::Rgb<u8> = image::Rgb([0, 255, 0]);
-// const YELLOW: image::Rgb<u8> = image::Rgb([255, 255, 0]);
-// const MAGENTA: image::Rgb<u8> = image::Rgb([255, 0, 255]);
-// const CYAN: image::Rgb<u8> = image::Rgb([0, 255, 255]);
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "couleurs")]
+/// Rendu de l’image par seuillage avec des couleurs personnalisées.
+struct OptsCouleurs {
+    /// la première couleur (format: 'red' / 'grey' / 'blue' / 'green' / 'yellow' / 'magenta' / 'cyan')
+    #[argh(option)]
+    couleur1: String,
+
+    /// la seconde couleur (format: 'red' / 'grey' / 'blue' / 'green' / 'yellow' / 'magenta' / 'cyan')
+    #[argh(option)]
+    couleur2: String,
+}
+
+
+const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
+const GREY: image::Rgb<u8> = image::Rgb([127, 127, 127]);
+const BLACK: image::Rgb<u8> = image::Rgb([0, 0, 0]);
+const BLUE: image::Rgb<u8> = image::Rgb([0, 0, 255]);
+const RED: image::Rgb<u8> = image::Rgb([255, 0, 0]);
+const GREEN: image::Rgb<u8> = image::Rgb([0, 255, 0]);
+const YELLOW: image::Rgb<u8> = image::Rgb([255, 255, 0]);
+const MAGENTA: image::Rgb<u8> = image::Rgb([255, 0, 255]);
+const CYAN: image::Rgb<u8> = image::Rgb([0, 255, 255]);
+
+const COLORS: [image::Rgb<u8>; 8] = [BLACK, WHITE, RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN];
+
+// Utils
 
 fn save(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
     img.save(path_out)?;
@@ -82,6 +101,30 @@ fn get_light(pixel: image::Rgb<u8>) -> u8 {
     // ! d'après la formule de luminance
     let light = 0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
     light as u8
+}
+
+fn get_closest_color(pixel: image::Rgb<u8>, colors: &[image::Rgb<u8>]) -> image::Rgb<u8> {
+    // Check if the pixel is already in the palette to early return
+    if let Some(&color) = colors.iter().find(|&&c| c == pixel) {
+        return color;
+    }
+
+    let mut min_distance = f32::MAX;
+    let mut closest_color = colors[0];
+
+    for color in colors.iter() {
+        let distance = ((color[0] as f32 - pixel[0] as f32).powi(2)
+            + (color[1] as f32 - pixel[1] as f32).powi(2)
+            + (color[2] as f32 - pixel[2] as f32).powi(2))
+        .sqrt();
+
+        if distance < min_distance {
+            min_distance = distance;
+            closest_color = *color;
+        }
+    }
+
+    closest_color
 }
 
 // Traitements
@@ -125,6 +168,71 @@ fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), Ima
     save(&img_out, path_out)
 }
 
+fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: String, couleur2: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    let couleur1 = match couleur1.as_str() {
+        "white" => WHITE,
+        "grey" => GREY,
+        "black" => BLACK,
+        "blue" => BLUE,
+        "red" => RED,
+        "green" => GREEN,
+        "yellow" => YELLOW,
+        "magenta" => MAGENTA,
+        "cyan" => CYAN,
+        _ => WHITE,
+    };
+
+    let couleur2 = match couleur2.as_str() {
+        "white" => WHITE,
+        "grey" => GREY,
+        "black" => BLACK,
+        "blue" => BLUE,
+        "red" => RED,
+        "green" => GREEN,
+        "yellow" => YELLOW,
+        "magenta" => MAGENTA,
+        "cyan" => CYAN,
+        _ => WHITE,
+    };
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let light = get_light(pixel);
+            let new_pixel = if light > 127 {
+                couleur1
+            } else {
+                couleur2
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+
+fn traitement_palette(img: &DynamicImage, path_out: String, _n_couleurs: usize) -> Result<(), ImageError> {
+    // take the _n_couleurs first colors of the COLORS array and create a new array, and then replace all pixels by the closest color in the new array
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let colors: Vec<image::Rgb<u8>> = COLORS.iter().take(_n_couleurs).cloned().collect();
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let new_pixel = get_closest_color(pixel, &colors);
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+
 
 fn main() -> Result<(), ImageError> {
     let args: DitherArgs = argh::from_env();
@@ -145,7 +253,16 @@ fn main() -> Result<(), ImageError> {
             traitement_monochrome(&img, path_out)?;
         }
         Mode::Palette(opts) => {
-            println!("Mode palette: {:?}", opts.n_couleurs);
+            println!("Mode palette: {:?} couleurs", opts.n_couleurs);
+            if (opts.n_couleurs > 8) {
+                println!("Le nombre de couleurs doit être inférieur ou égal à 8");
+                return Ok(());
+            } else if (opts.n_couleurs < 2) {
+                println!("Le nombre de couleurs doit être supérieur ou égal à 2");
+                return Ok(());
+            } else {
+                traitement_palette(&img, path_out, opts.n_couleurs)?;
+            }
         }
         Mode::Pixel(opts) => {
             println!("Mode pixel: ({}, {})", opts.x, opts.y);
@@ -158,6 +275,10 @@ fn main() -> Result<(), ImageError> {
         Mode::SplitWhite(_) => {
             println!("Mode split white");
             traitement_split_white(&img, path_out)?;
+        }
+        Mode::Couleurs(opts) => {
+            println!("Mode couleurs: {}, {}", opts.couleur1, opts.couleur2);
+            traitement_paire_palette(&img, path_out, opts.couleur1, opts.couleur2)?;
         }
     }
 
