@@ -414,13 +414,51 @@ _Implémenter le traitement_
 Traitement : 
 
 ```rust
+fn traitement_palette(img: &DynamicImage, path_out: String, _n_couleurs: usize) -> Result<(), ImageError> {
+    // take the _n_couleurs first colors of the COLORS array and create a new array, and then replace all pixels by the closest color in the new array
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let colors: Vec<image::Rgb<u8>> = COLORS.iter().take(_n_couleurs).cloned().collect();
 
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let new_pixel = get_closest_color(pixel, &colors);
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
 ```
+
+Instructions pour passer une image en palette de couleurs :
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/palette.png palette --n-couleurs 3
+```
+
+(2 couleurs)
+
+!['question10.1'](exports/palette_1.png)
+
+(3 couleurs)
+
+!['question10.2'](exports/palette_2.png)
+
+(8 couleurs)
+
+!['question10.3'](exports/palette_3.png)
 
 ## Question 11
 
 _Votre application doit se comporter correctement si on donne une palette vide. Vous
 expliquerez dans votre README le choix que vous avez fait dans ce cas._
+
+## Question 12
+
+_Implémenter le tramage aléatoire des images._
 
 ## Question 13
 

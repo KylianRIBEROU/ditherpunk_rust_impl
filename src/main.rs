@@ -26,6 +26,7 @@ enum Mode {
     Pixel(OptsPixel),
     SplitWhite(OptsSplitWhite),
     Couleurs(OptsCouleurs),
+    Tramage(OptsTramage),
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
@@ -70,6 +71,10 @@ struct OptsCouleurs {
     couleur2: String,
 }
 
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "tramage")]
+/// Rendu de l’image par tramage aléatoire
+struct OptsTramage {}
 
 const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
 const GREY: image::Rgb<u8> = image::Rgb([127, 127, 127]);
@@ -99,7 +104,8 @@ fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
 fn get_light(pixel: image::Rgb<u8>) -> u8 {
     let channels = pixel.channels();
     // ! d'après la formule de luminance
-    let light = 0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
+    let light =
+        0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
     light as u8
 }
 
@@ -168,7 +174,12 @@ fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), Ima
     save(&img_out, path_out)
 }
 
-fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: String, couleur2: String) -> Result<(), ImageError> {
+fn traitement_paire_palette(
+    img: &DynamicImage,
+    path_out: String,
+    couleur1: String,
+    couleur2: String,
+) -> Result<(), ImageError> {
     let (width, height) = img.dimensions();
     let mut img_out: RgbImage = ImageBuffer::new(width, height);
 
@@ -202,11 +213,7 @@ fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: Stri
         for x in 0..width {
             let pixel = img.get_pixel(x, y).to_rgb();
             let light = get_light(pixel);
-            let new_pixel = if light > 127 {
-                couleur1
-            } else {
-                couleur2
-            };
+            let new_pixel = if light > 127 { couleur1 } else { couleur2 };
             img_out.put_pixel(x, y, new_pixel);
         }
     }
@@ -215,7 +222,11 @@ fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: Stri
     save(&img_out, path_out)
 }
 
-fn traitement_palette(img: &DynamicImage, path_out: String, _n_couleurs: usize) -> Result<(), ImageError> {
+fn traitement_palette(
+    img: &DynamicImage,
+    path_out: String,
+    _n_couleurs: usize,
+) -> Result<(), ImageError> {
     // take the _n_couleurs first colors of the COLORS array and create a new array, and then replace all pixels by the closest color in the new array
     let (width, height) = img.dimensions();
     let mut img_out: RgbImage = ImageBuffer::new(width, height);
@@ -233,6 +244,28 @@ fn traitement_palette(img: &DynamicImage, path_out: String, _n_couleurs: usize) 
     save(&img_out, path_out)
 }
 
+// Dithering (tramage aléatoire, pour chaque pixel, on genere une valeur entre 0 et 1, puis on le multiplie à chaque valeur RGB du pixel, puis si la valeur est supérieure à 127, on met le pixel en blanc, sinon en noir)
+fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let light = get_light(pixel);
+            let random = rand::random::<u8>() as f32 / 255.0;
+            let new_pixel = if light as f32 * random > 127.0 {
+                WHITE
+            } else {
+                BLACK
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
 
 fn main() -> Result<(), ImageError> {
     let args: DitherArgs = argh::from_env();
@@ -254,10 +287,10 @@ fn main() -> Result<(), ImageError> {
         }
         Mode::Palette(opts) => {
             println!("Mode palette: {:?} couleurs", opts.n_couleurs);
-            if (opts.n_couleurs > 8) {
+            if opts.n_couleurs > 8 {
                 println!("Le nombre de couleurs doit être inférieur ou égal à 8");
                 return Ok(());
-            } else if (opts.n_couleurs < 2) {
+            } else if opts.n_couleurs < 2 {
                 println!("Le nombre de couleurs doit être supérieur ou égal à 2");
                 return Ok(());
             } else {
@@ -279,6 +312,10 @@ fn main() -> Result<(), ImageError> {
         Mode::Couleurs(opts) => {
             println!("Mode couleurs: {}, {}", opts.couleur1, opts.couleur2);
             traitement_paire_palette(&img, path_out, opts.couleur1, opts.couleur2)?;
+        }
+        Mode::Tramage(_) => {
+            println!("Mode tramage");
+            traitement_dithering(&img, path_out)?;
         }
     }
 
