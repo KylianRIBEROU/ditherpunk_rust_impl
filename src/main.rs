@@ -26,7 +26,8 @@ enum Mode {
     Pixel(OptsPixel),
     SplitWhite(OptsSplitWhite),
     Couleurs(OptsCouleurs),
-    Tramage(OptsTramage),
+    Dithering(OptsDithering),
+    OrderedDithering(OptsOrderedDithering),
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
@@ -72,9 +73,14 @@ struct OptsCouleurs {
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
-#[argh(subcommand, name = "tramage")]
+#[argh(subcommand, name = "dithering")]
 /// Rendu de l’image par tramage aléatoire
-struct OptsTramage {}
+struct OptsDithering {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "ordered_dithering")]
+/// Rendu de l’image par tramage ordonné
+struct OptsOrderedDithering {}
 
 const WHITE: image::Rgb<u8> = image::Rgb([255, 255, 255]);
 const GREY: image::Rgb<u8> = image::Rgb([127, 127, 127]);
@@ -85,6 +91,13 @@ const GREEN: image::Rgb<u8> = image::Rgb([0, 255, 0]);
 const YELLOW: image::Rgb<u8> = image::Rgb([255, 255, 0]);
 const MAGENTA: image::Rgb<u8> = image::Rgb([255, 0, 255]);
 const CYAN: image::Rgb<u8> = image::Rgb([0, 255, 255]);
+
+const BAYER_MATRIX: [[u8; 4]; 4] = [
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5],
+];
 
 const COLORS: [image::Rgb<u8>; 8] = [BLACK, WHITE, RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN];
 
@@ -244,7 +257,6 @@ fn traitement_palette(
     save(&img_out, path_out)
 }
 
-// Dithering (tramage aléatoire, pour chaque pixel, on genere une valeur entre 0 et 1, puis on le multiplie à chaque valeur RGB du pixel, puis si la valeur est supérieure à 127, on met le pixel en blanc, sinon en noir)
 fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
     let (width, height) = img.dimensions();
     let mut img_out: RgbImage = ImageBuffer::new(width, height);
@@ -252,12 +264,34 @@ fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), Imag
     for y in 0..height {
         for x in 0..width {
             let pixel = img.get_pixel(x, y).to_rgb();
-            let light = get_light(pixel);
-            let random = rand::random::<u8>() as f32 / 255.0;
-            let new_pixel = if light as f32 * random > 127.0 {
-                WHITE
+            let seuil = rand::random::<f32>(); // Génération d'un nombre entre 0 et 1
+            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
+            let new_pixel = if light > seuil {
+                WHITE // Appel à la constante WHITE
             } else {
-                BLACK
+                BLACK // Appel à la constante BLACK
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+
+fn traitement_ordered_dithering(img: &DynamicImage, path_out: String, bayer_matrix: [[u8; 4]; 4]) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let seuil = bayer_matrix[y as usize % 4][x as usize % 4] as f32 / 16.0; // Normalisation pour comparaison avec le seuil
+            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
+            let new_pixel = if light > seuil {
+                WHITE // Appel à la constante WHITE
+            } else {
+                BLACK // Appel à la constante BLACK
             };
             img_out.put_pixel(x, y, new_pixel);
         }
@@ -313,9 +347,13 @@ fn main() -> Result<(), ImageError> {
             println!("Mode couleurs: {}, {}", opts.couleur1, opts.couleur2);
             traitement_paire_palette(&img, path_out, opts.couleur1, opts.couleur2)?;
         }
-        Mode::Tramage(_) => {
+        Mode::Dithering(_) => {
             println!("Mode tramage");
             traitement_dithering(&img, path_out)?;
+        }
+        Mode::OrderedDithering(_) => {
+            println!("Mode tramage ordonné");
+            traitement_ordered_dithering(&img, path_out, BAYER_MATRIX)?;
         }
     }
 

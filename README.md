@@ -460,11 +460,90 @@ expliquerez dans votre README le choix que vous avez fait dans ce cas._
 
 _Implémenter le tramage aléatoire des images._
 
+Traitement : 
+
+```rust
+fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            let seuil = rand::random::<f32>(); // Génération d'un nombre entre 0 et 1
+            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
+            let new_pixel = if light > seuil {
+                WHITE // Appel à la constante WHITE
+            } else {
+                BLACK // Appel à la constante BLACK
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+```
+Instructions pour passer une image en tramage aléatoire :
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/tramage_aleatoire.png dithering
+```
+
+
 ## Question 13
 
 !['q13'](assets/q13.png)
 
 _Déterminer 𝐵3._
+
+## Question 15
+
+_Implémenter le tramage par matrice de Bayer._
+
+Définition d'une **matrice de Bayer** : 
+
+```rust
+const BAYER_MATRIX: [[u8; 4]; 4] = [
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5],
+];
+```
+
+Traitement :
+
+```rust
+fn traitement_ordered_dithering(img: &DynamicImage, path_out: String, bayer_matrix: [[u8; 4]; 4]) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();&
+            let seuil = bayer_matrix[y as usize % 4][x as usize % 4] as f32 / 16.0; // Normalisation pour comparaison avec le seuil
+            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
+            let new_pixel = if light > seuil {
+                WHITE // Appel à la constante WHITE
+            } else {
+                BLACK // Appel à la constante BLACK
+            };
+            img_out.put_pixel(x, y, new_pixel);
+        }
+    }
+
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+```
+
+Instructions pour passer une image en tramage ordonné :
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/ordered_dithering.png ordered_dithering
+```
 
 ## Question 17
 
