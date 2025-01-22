@@ -116,9 +116,11 @@ fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
 
 fn get_light(pixel: image::Rgb<u8>) -> u8 {
     let channels = pixel.channels();
-    // ! d'après la formule de luminance
+    // !  d'après la formule de luminance
     let light =
-        0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
+        0.2126 * channels[0] as f32
+        + 0.7152 * channels[1] as f32 
+        + 0.0722 * channels[2] as f32;
     light as u8
 }
 

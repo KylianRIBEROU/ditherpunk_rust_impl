@@ -106,7 +106,7 @@ Si l'image de départ avait un canal alpha, la méthode `to_rgb8()` de `DynamicI
 
 ## Question 4
 
-_Afficher dans le terminal la couleur du pixel (32,52) de l’image de votre choix._
+ _Afficher dans le terminal la couleur du pixel (32,52) de l’image de votre choix._
 
 Pour cette question, nous avons créer un nouveau mode de traitement `pixel`, prenant des sous-paramètres `x` et `y` pour déterminer les coordonnées du pixel à afficher.
 
@@ -488,7 +488,7 @@ fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), Imag
 Instructions pour passer une image en tramage aléatoire :
 
 ```bash
-cargo run -- ./imports/test.jpg ./exports/tramage_aleatoire.png dithering
+cargo run -- ./imports/test.jpg ./exports/dithering.png dithering
 ```
 
 
@@ -497,6 +497,21 @@ cargo run -- ./imports/test.jpg ./exports/tramage_aleatoire.png dithering
 !['q13'](assets/q13.png)
 
 _Déterminer 𝐵3._
+
+$$
+B3 = 
+\frac{1}{64}.
+\begin{bmatrix}
+0 & 32 & 8 & 40 & 2 & 34 & 10 & 42 \\
+48 & 16 & 56 & 24 & 50 & 18 & 58 & 26 \\
+12 & 44 & 4 & 36 & 14 & 46 & 6 & 38 \\
+60 & 28 & 52 & 20 & 62 & 30 & 54 & 22 \\
+3 & 35 & 11 & 43 & 1 & 33 & 9 & 41 \\
+51 & 19 & 59 & 27 & 49 & 17 & 57 & 25 \\
+15 & 47 & 7 & 39 & 13 & 45 & 5 & 37 \\
+63 & 31 & 55 & 23 & 61 & 29 & 53 & 21
+\end{bmatrix}
+$$
 
 ## Question 15
 
