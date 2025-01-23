@@ -2,6 +2,8 @@
 
 LAVENANT Jordan - RIBEROU Kylian - BUT 3
 
+Groupe 31A
+
 # Pré-requis
 
 > Traitement 1, 2, 3, 4 **OBLIGATOIRE**
@@ -32,7 +34,9 @@ cargo run -- ./imports/test.jpg palette --n-couleurs 5
 
 # Questions
 
-## Question 1
+## Partie 1 - manipulation bibliothèque Image
+
+### Question 1
 
 Création d'un nouveau projet Cargo :
 ```toml
@@ -48,7 +52,7 @@ image = "0.24.9"
 argh = "0.1.13"
 ```
 
-## Question 2
+### Question 2
 
 - Pour ouvrir une image depuis un fichier, on utilise :
 
@@ -77,7 +81,7 @@ Une image arbitraire peut avoir des pixels de nature différente:
   Passer l’image d’entrée en mode rgb8, c’est-à-dire avec 3 canaux R, G, B, représentés chacun
   par un u8.
 
-## Question 3
+### Question 3
 
 _Sauver l’image obtenue au format png._
 
@@ -104,7 +108,7 @@ alpha?_
 
 Si l'image de départ avait un canal alpha, la méthode `to_rgb8()` de `DynamicImage` supprime le canal alpha et ne conserve que les canaux R, G, B.
 
-## Question 4
+### Question 4
 
  _Afficher dans le terminal la couleur du pixel (32,52) de l’image de votre choix._
 
@@ -184,7 +188,7 @@ Affichage de la couleur du pixel (32, 52) :
 !['question4'](assets/question4.png)
 
 
-## Question 5
+### Question 5
 
 _Passer un pixel sur deux d’une image en blanc. Est-ce que l’image obtenue est reconnaissable?_
 
@@ -220,7 +224,9 @@ Résultat de l'image obtenue :
 
 !['question5'](exports/split_white.png)
 
-## Question 6
+## Partie 2 - passage en monochrome par seuillage
+
+### Question 6
 
 _Comment récupérer la luminosité d’un pixel?_
 
@@ -240,7 +246,7 @@ fn get_light(pixel: image::Rgb<u8>) -> u8 {
 
 Ainsi, la luminosité d'un pixel est une valeur entre 0 et 255, où 0 représente le noir et 255 le blanc.
 
-## Question 7
+### Question 7
 
 _Implémenter le traitement_
 
@@ -278,7 +284,7 @@ Résultat de l'image obtenue :
 
 !['question7'](exports/monochrome.png)
 
-## Question 8
+### Question 8
 
 Traitement permettant de passer une paire (2) de couleur à une image, en fonction de sa luminosité :
 
@@ -371,8 +377,9 @@ cargo run -- ./imports/test.jpg ./exports/cyan_green.png couleurs --couleur1 cya
 > Cyan / Green
 !['question8.2'](exports/cyan_green.png)
 
+## Partie 3 - Passage à une palette
 
-## Question 9
+### Question 9
 
 _Comment calculer la distance entre deux couleurs? Indiquer dans le README la méthode de
 calcul choisie._
@@ -407,7 +414,7 @@ fn get_closest_color(pixel: image::Rgb<u8>) -> image::Rgb<u8> {
 
 > On peut ensuite optimiser cette fonction en vérifiant si le pixel passé en paramètre est directement dans la palette, pour éviter de parcourir la palette entière à chaque fois.
 
-## Question 10
+### Question 10
 
 _Implémenter le traitement_
 
@@ -451,12 +458,14 @@ cargo run -- ./imports/test.jpg ./exports/palette.png palette --n-couleurs 3
 
 !['question10.3'](exports/palette_3.png)
 
-## Question 11
+### Question 11
 
 _Votre application doit se comporter correctement si on donne une palette vide. Vous
 expliquerez dans votre README le choix que vous avez fait dans ce cas._
 
-## Question 12
+## Partie 4 - tramage aléatoire
+
+### Question 12
 
 _Implémenter le tramage aléatoire des images._
 
@@ -491,8 +500,9 @@ Instructions pour passer une image en tramage aléatoire :
 cargo run -- ./imports/test.jpg ./exports/dithering.png dithering
 ```
 
+## Partie 5 - Utilisation de la matrice de Bayer
 
-## Question 13
+### Question 13
 
 !['q13'](assets/q13.png)
 
@@ -513,7 +523,7 @@ B3 =
 \end{bmatrix}
 $$
 
-## Question 15
+### Question 15
 
 _Implémenter le tramage par matrice de Bayer._
 
@@ -560,7 +570,7 @@ Instructions pour passer une image en tramage ordonné :
 cargo run -- ./imports/test.jpg ./exports/ordered_dithering.png ordered_dithering
 ```
 
-## Question 17
+## Partie 6 - Diffusion d'erreurs
 
 _Pour une palette de couleurs comme dans la partie 3, expliquer dans votre README comment
 vous représentez l’erreur commise à chaque pixel, comment vous la diffusez._
