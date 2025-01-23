@@ -575,3 +575,106 @@ cargo run -- ./imports/test.jpg ./exports/ordered_dithering.png ordered_ditherin
 _Pour une palette de couleurs comme dans la partie 3, expliquer dans votre README comment
 vous représentez l’erreur commise à chaque pixel, comment vous la diffusez._
 
+### Question 16
+
+Nous développons tout d'abord une classe utilitaire `MatriceErreur` qui contiendra la matrice avec ses coefficients et sa taille.
+
+Cette classe sera passée en entrée du traitement, pour pouvoir l'appliquer avec plusieurs matrices différentes.
+
+Dans le cas présent, nous appliquons le traitement avec la matrice donnée : 
+
+$$
+\begin{bmatrix}
+* & 0.5 \\
+0.5 & 0
+\end{bmatrix}
+$$
+
+
+Méthode de traitement : 
+
+```rust
+/**
+ * Applique le traitement de diffusion d'erreur sur l'image passée en paramètre.
+ * Prend une matrice en entrée comme ça on définit celle qu'on veut
+ * par exemple qst16 c'estune matrice avec des coeff 0.5 mais qst19 c'est matrice de Floyd-Steinberg
+ */
+pub fn traitement_diffusion_erreur(
+    img: &DynamicImage,
+    path_out: String,
+    matrice_erreur: &MatriceErreur,
+) -> Result<(), ImageError> {
+    let (width, height) = img.dimensions();
+    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+
+    // Convertir l'image en niveaux de gris
+    let mut luminances: Vec<Vec<f32>> = vec![vec![0.0; width as usize]; height as usize];
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = img.get_pixel(x, y).to_rgb();
+            luminances[y as usize][x as usize] = get_light(pixel) as f32 / 255.0;
+        }
+    }
+
+    // Parcourir chaque pixel
+    for y in 0..height as usize {
+        for x in 0..width as usize {
+            let old_luminance = luminances[y][x];
+            let new_luminance = if old_luminance > 0.5 { 1.0 } else { 0.0 };
+            let error = old_luminance - new_luminance;
+
+            // Définir la nouvelle couleur (noir ou blanc)
+            let new_pixel = if new_luminance == 1.0 {
+                image::Rgb([255, 255, 255])
+            } else {
+                image::Rgb([0, 0, 0])
+            };
+            img_out.put_pixel(x as u32, y as u32, new_pixel);
+
+            // Diffuser l'erreur aux voisins en utilisant la matrice d'erreur
+            for row in 0..matrice_erreur.matrix.len() {
+
+                for col in 0..matrice_erreur.matrix[row].len() {
+                    // par default le coefficient est la première valeur de la matrice
+                    let coefficient = matrice_erreur.get_value(row, col).unwrap_or(0.0);
+                    let nx = x as isize + col as isize - matrice_erreur.x_origin as isize;
+                    let ny = y as isize + row as isize;
+                    if coefficient != 0.0 && nx >= 0 && nx < width as isize && ny >= 0 && ny < height as isize {
+                        luminances[ny as usize][nx as usize] += error * coefficient as f32;
+                    }
+                }
+            }
+        }
+    }
+
+    // Convertir le buffer en DynamicImage et sauvegarder
+    let img_out = DynamicImage::ImageRgb8(img_out);
+    save(&img_out, path_out)
+}
+```
+
+On obtient ce résultat
+
+![error_diffusion_image_1](./exports/error_diffusion_1.png)
+
+### Question 17 
+
+Appliquer la diffusion d'erreur dans le cadre d'une image transformée à l'aide d'une palette de couleurs donnée :
+
+- pour chaque pixel de l'image, on détermine la couleur de la palette qui est la plus proche de la couleur réelle du pixel, avec la distance euclidienne .
+
+- Une fois la couleur la plus proche identifiée, on récupère l'erreur qui correspond à la différence entre la couleur réelle du pixel et la couleur approximative proche de la palette. 
+
+- propager l'erreur aux pixels pas traités avec une matrice de diffusion d'erreur. Par exemple, avec une matrice simple comme :
+
+$$
+\begin{bmatrix}
+* & 0.5 \\
+0.5 & 0
+\end{bmatrix}
+$$
+
+-> 50% de l'erreur est transmise au pixel à droite.
+
+-> 50% au pixel en dessous.
+
