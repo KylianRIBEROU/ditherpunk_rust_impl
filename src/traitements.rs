@@ -1,21 +1,14 @@
-
-use image::{DynamicImage, ImageBuffer, ImageError, RgbImage, GenericImageView, Pixel};
-use crate::constantes::{WHITE, GREY, BLACK, BLUE, RED, GREEN, YELLOW, MAGENTA, CYAN, COLORS};
-use crate::utils::{get_light, get_closest_color, save};
+use crate::constantes::{BLACK, BLUE, COLORS, CYAN, GREEN, GREY, MAGENTA, RED, WHITE, YELLOW};
 use crate::matrice_erreur::matrice_erreur::MatriceErreur;
-
+use crate::utils::{get_closest_color, get_light, save};
+use image::{DynamicImage, GenericImageView, ImageBuffer, ImageError, Pixel, RgbImage};
 
 pub fn traitement_split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions(); 
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            if (x + y) % 2 == 0 {
-                img_out.put_pixel(x, y, image::Rgb([255, 255, 255]));
-            } else {
-                img_out.put_pixel(x, y, img.get_pixel(x, y).to_rgb());
-            }
+    for (x, y, pixel) in img_out.enumerate_pixels_mut() {
+        if (x + y) % 2 == 0 {
+            *pixel = image::Rgb([255, 255, 255]);
         }
     }
 
@@ -24,20 +17,16 @@ pub fn traitement_split_white(img: &DynamicImage, path_out: String) -> Result<()
 }
 
 pub fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let light = get_light(pixel);
-            let new_pixel = if light > 127 {
-                image::Rgb([255, 255, 255])
-            } else {
-                image::Rgb([0, 0, 0])
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let light = get_light(*pixel);
+        let new_pixel = if light > 0.5 {
+            image::Rgb([255, 255, 255])
+        } else {
+            image::Rgb([0, 0, 0])
+        };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -50,8 +39,7 @@ pub fn traitement_paire_palette(
     couleur1: String,
     couleur2: String,
 ) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
     let couleur1 = match couleur1.as_str() {
         "white" => WHITE,
@@ -79,13 +67,10 @@ pub fn traitement_paire_palette(
         _ => WHITE,
     };
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let light = get_light(pixel);
-            let new_pixel = if light > 127 { couleur1 } else { couleur2 };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let light = get_light(*pixel);
+        let new_pixel = if light > 0.5 { couleur1 } else { couleur2 };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -98,16 +83,12 @@ pub fn traitement_palette(
     _n_couleurs: usize,
 ) -> Result<(), ImageError> {
     // take the _n_couleurs first colors of the COLORS array and create a new array, and then replace all pixels by the closest color in the new array
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let mut img_out: RgbImage = img.clone().to_rgb8();
     let colors: Vec<image::Rgb<u8>> = COLORS.iter().take(_n_couleurs).cloned().collect();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let new_pixel = get_closest_color(pixel, &colors);
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let new_pixel = get_closest_color(*pixel, &colors);
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -115,49 +96,46 @@ pub fn traitement_palette(
 }
 
 pub fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let seuil = rand::random::<f32>(); // Génération d'un nombre entre 0 et 1
-            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
-            let new_pixel = if light > seuil {
-                WHITE // Appel à la constante WHITE
-            } else {
-                BLACK // Appel à la constante BLACK
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let light = get_light(*pixel); // Luminance du pixel
+        let seuil = rand::random::<f32>(); // Génération d'un nombre entre 0 et 1
+        let new_pixel = if light > seuil {
+            WHITE // Appel à la constante WHITE
+        } else {
+            BLACK // Appel à la constante BLACK
+        };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
     save(&img_out, path_out)
 }
 
-pub fn traitement_ordered_dithering(img: &DynamicImage, path_out: String, bayer_matrix: [[u8; 4]; 4]) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+pub fn traitement_ordered_dithering(
+    img: &DynamicImage,
+    path_out: String,
+    bayer_matrix: [[u8; 4]; 4],
+) -> Result<(), ImageError> {
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let seuil = bayer_matrix[y as usize % 4][x as usize % 4] as f32 / 16.0; // Normalisation pour comparaison avec le seuil
-            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
-            let new_pixel = if light > seuil {
-                WHITE // Appel à la constante WHITE
-            } else {
-                BLACK // Appel à la constante BLACK
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (x, y, pixel) in img_out.enumerate_pixels_mut() {
+        let seuil = bayer_matrix[y as usize % 4][x as usize % 4] as f32 / 16.0; // Normalisation pour comparaison avec le seuil
+        let light = get_light(*pixel); // Luminance du pixel
+        let new_pixel = if light > seuil {
+            WHITE // Appel à la constante WHITE
+        } else {
+            BLACK // Appel à la constante BLACK
+        };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
     save(&img_out, path_out)
 }
 
+// TODO: fix the error diffusion
 /**
  * Applique le traitement de diffusion d'erreur sur l'image passée en paramètre.
  * Prend une matrice en entrée comme ça on définit celle qu'on veut
@@ -176,7 +154,7 @@ pub fn traitement_diffusion_erreur(
     for y in 0..height {
         for x in 0..width {
             let pixel = img.get_pixel(x, y).to_rgb();
-            luminances[y as usize][x as usize] = get_light(pixel) as f32 / 255.0;
+            luminances[y as usize][x as usize] = get_light(pixel);
         }
     }
 
@@ -197,13 +175,17 @@ pub fn traitement_diffusion_erreur(
 
             // Diffuser l'erreur aux voisins en utilisant la matrice d'erreur
             for row in 0..matrice_erreur.matrix.len() {
-
                 for col in 0..matrice_erreur.matrix[row].len() {
                     // par default le coefficient est la première valeur de la matrice
                     let coefficient = matrice_erreur.get_value(row, col).unwrap_or(0.0);
                     let nx = x as isize + col as isize - matrice_erreur.x_origin as isize;
                     let ny = y as isize + row as isize;
-                    if coefficient != 0.0 && nx >= 0 && nx < width as isize && ny >= 0 && ny < height as isize {
+                    if coefficient != 0.0
+                        && nx >= 0
+                        && nx < width as isize
+                        && ny >= 0
+                        && ny < height as isize
+                    {
                         luminances[ny as usize][nx as usize] += error * coefficient as f32;
                     }
                 }

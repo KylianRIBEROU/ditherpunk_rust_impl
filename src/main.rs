@@ -1,23 +1,23 @@
 mod cli_arguments;
 mod constantes;
-mod utils;
-mod traitements;
 mod matrice_erreur;
+mod traitements;
+mod utils;
 
 use image::io::Reader as ImageReader;
 use image::DynamicImage;
-use image::ImageError;
 use image::GenericImageView;
-
+use image::ImageError;
 
 use matrice_erreur::matrice_erreur::MatriceErreur;
 use utils::get_pixel;
 
-use constantes::BAYER_MATRIX;
 use cli_arguments::{DitherArgs, Mode};
+use constantes::BAYER_MATRIX;
 use traitements::{
-    traitement_monochrome, traitement_palette, traitement_split_white, traitement_paire_palette,
-    traitement_dithering, traitement_ordered_dithering, traitement_diffusion_erreur
+    traitement_diffusion_erreur, traitement_dithering, traitement_monochrome,
+    traitement_ordered_dithering, traitement_paire_palette, traitement_palette,
+    traitement_split_white,
 };
 
 fn main() -> Result<(), ImageError> {
@@ -79,7 +79,7 @@ fn main() -> Result<(), ImageError> {
             //todo matrice
 
             let floyd_stenbeirg_matrice = MatriceErreur::new(
-                1, 
+                1,
                 vec![
                     vec![0.0, 0.4375],    // Droite
                     vec![0.1875, 0.3125], // Gauche-bas, bas
@@ -89,11 +89,11 @@ fn main() -> Result<(), ImageError> {
             let qst16_matrice = MatriceErreur::new(
                 0, // La position courante (le pixel à traiter) est dans la première colonne
                 vec![
-                    vec![0.5],  // Erreur diffusée à droite
-                    vec![0.5],  // Erreur diffusée en bas
+                    vec![0.5], // Erreur diffusée à droite
+                    vec![0.5], // Erreur diffusée en bas
                 ],
             );
-                        
+
             traitement_diffusion_erreur(&img, path_out, &qst16_matrice)?;
         }
     }

@@ -1,4 +1,4 @@
-use image::{DynamicImage, ImageError, GenericImageView, Pixel};
+use image::{DynamicImage, GenericImageView, ImageError, Pixel};
 
 pub fn save(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
     img.save(path_out)?;
@@ -11,14 +11,12 @@ pub fn get_pixel(img: &DynamicImage, x: u32, y: u32) -> image::Rgb<u8> {
     image::Rgb([channels[0], channels[1], channels[2]])
 }
 
-pub fn get_light(pixel: image::Rgb<u8>) -> u8 {
+pub fn get_light(pixel: image::Rgb<u8>) -> f32 {
     let channels = pixel.channels();
     // !  d'après la formule de luminance
     let light =
-        0.2126 * channels[0] as f32
-        + 0.7152 * channels[1] as f32 
-        + 0.0722 * channels[2] as f32;
-    light as u8
+        0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
+    light / 255.0
 }
 
 pub fn get_closest_color(pixel: image::Rgb<u8>, colors: &[image::Rgb<u8>]) -> image::Rgb<u8> {
