@@ -195,17 +195,12 @@ _Passer un pixel sur deux d’une image en blanc. Est-ce que l’image obtenue e
 Traitement : 
 
 ```rust
-fn traitement_split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+pub fn traitement_split_white(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            if (x + y) % 2 == 0 {
-                img_out.put_pixel(x, y, image::Rgb([255, 255, 255]));
-            } else {
-                img_out.put_pixel(x, y, img.get_pixel(x, y).to_rgb());
-            }
+    for (x, y, pixel) in img_out.enumerate_pixels_mut() {
+        if (x + y) % 2 == 0 {
+            *pixel = image::Rgb([255, 255, 255]);
         }
     }
 
@@ -237,10 +232,10 @@ Vert : `0.7152`
 Bleu : `0.0722`  
 
 ```rust
-fn get_light(pixel: image::Rgb<u8>) -> u8 {
+pub fn get_light(pixel: image::Rgb<u8>) -> f32 {
     let channels = pixel.channels();
     let light = 0.2126 * channels[0] as f32 + 0.7152 * channels[1] as f32 + 0.0722 * channels[2] as f32;
-    light as u8
+    light / 255.0
 }
 ```
 
@@ -253,21 +248,17 @@ _Implémenter le traitement_
 Traitement : 
 
 ```rust
-fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+pub fn traitement_monochrome(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let light = get_light(pixel);
-            let new_pixel = if light > 127 {
-                image::Rgb([255, 255, 255])
-            } else {
-                image::Rgb([0, 0, 0])
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let light = get_light(*pixel);
+        let new_pixel = if light > 0.5 {
+            image::Rgb([255, 255, 255])
+        } else {
+            image::Rgb([0, 0, 0])
+        };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -304,9 +295,13 @@ struct OptsCouleurs {
 ```
 
 ```rust
-fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: String, couleur2: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+pub fn traitement_paire_palette(
+    img: &DynamicImage,
+    path_out: String,
+    couleur1: String,
+    couleur2: String,
+) -> Result<(), ImageError> {
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
     let couleur1 = match couleur1.as_str() {
         "white" => WHITE,
@@ -334,17 +329,10 @@ fn traitement_paire_palette(img: &DynamicImage, path_out: String, couleur1: Stri
         _ => WHITE,
     };
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let light = get_light(pixel);
-            let new_pixel = if light > 127 {
-                couleur1
-            } else {
-                couleur2
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let light = get_light(*pixel);
+        let new_pixel = if light > 0.5 { couleur1 } else { couleur2 };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -387,16 +375,16 @@ calcul choisie._
 Pour calculer la distance entre deux couleurs, on peut utiliser la distance euclidienne. On peut donc sommer la distance entre chaque attributs R, G, et B, étant des nombres compris entre 0 et 255. On compare ensuite la distance entre chaque attribut de chaque couleur, puis nous conservons la distance la plus courte, et ainsi la couleur la plus proche.
 
 ```rust
-fn get_closest_color(pixel: image::Rgb<u8>) -> image::Rgb<u8> {
+pub fn get_closest_color(pixel: image::Rgb<u8>, colors: &[image::Rgb<u8>]) -> image::Rgb<u8> {
     // Check if the pixel is already in the palette to early return
-    if let Some(&color) = COLORS.iter().find(|&&c| c == pixel) {
+    if let Some(&color) = colors.iter().find(|&&c| c == pixel) {
         return color;
     }
 
     let mut min_distance = f32::MAX;
-    let mut closest_color = COLORS[0];
+    let mut closest_color = colors[0];
 
-    for color in COLORS.iter() {
+    for color in colors.iter() {
         let distance = ((color[0] as f32 - pixel[0] as f32).powi(2)
             + (color[1] as f32 - pixel[1] as f32).powi(2)
             + (color[2] as f32 - pixel[2] as f32).powi(2))
@@ -421,18 +409,18 @@ _Implémenter le traitement_
 Traitement : 
 
 ```rust
-fn traitement_palette(img: &DynamicImage, path_out: String, _n_couleurs: usize) -> Result<(), ImageError> {
+pub fn traitement_palette(
+    img: &DynamicImage,
+    path_out: String,
+    _n_couleurs: usize,
+) -> Result<(), ImageError> {
     // take the _n_couleurs first colors of the COLORS array and create a new array, and then replace all pixels by the closest color in the new array
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+    let mut img_out: RgbImage = img.clone().to_rgb8();
     let colors: Vec<image::Rgb<u8>> = COLORS.iter().take(_n_couleurs).cloned().collect();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let new_pixel = get_closest_color(pixel, &colors);
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let new_pixel = get_closest_color(*pixel, &colors);
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -472,22 +460,18 @@ _Implémenter le tramage aléatoire des images._
 Traitement : 
 
 ```rust
-fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+pub fn traitement_dithering(img: &DynamicImage, path_out: String) -> Result<(), ImageError> {
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            let seuil = rand::random::<f32>(); // Génération d'un nombre entre 0 et 1
-            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
-            let new_pixel = if light > seuil {
-                WHITE // Appel à la constante WHITE
-            } else {
-                BLACK // Appel à la constante BLACK
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (_, _, pixel) in img_out.enumerate_pixels_mut() {
+        let light = get_light(*pixel); // Luminance du pixel
+        let seuil = rand::random::<f32>(); // Génération d'un nombre entre 0 et 1
+        let new_pixel = if light > seuil {
+            WHITE // Appel à la constante WHITE
+        } else {
+            BLACK // Appel à la constante BLACK
+        };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -541,22 +525,22 @@ const BAYER_MATRIX: [[u8; 4]; 4] = [
 Traitement :
 
 ```rust
-fn traitement_ordered_dithering(img: &DynamicImage, path_out: String, bayer_matrix: [[u8; 4]; 4]) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
+pub fn traitement_ordered_dithering(
+    img: &DynamicImage,
+    path_out: String,
+    bayer_matrix: [[u8; 4]; 4],
+) -> Result<(), ImageError> {
+    let mut img_out: RgbImage = img.clone().to_rgb8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();&
-            let seuil = bayer_matrix[y as usize % 4][x as usize % 4] as f32 / 16.0; // Normalisation pour comparaison avec le seuil
-            let light = get_light(pixel) as f32 / 255.0; // Normalisation pour comparaison avec le seuil
-            let new_pixel = if light > seuil {
-                WHITE // Appel à la constante WHITE
-            } else {
-                BLACK // Appel à la constante BLACK
-            };
-            img_out.put_pixel(x, y, new_pixel);
-        }
+    for (x, y, pixel) in img_out.enumerate_pixels_mut() {
+        let seuil = bayer_matrix[y as usize % 4][x as usize % 4] as f32 / 16.0; // Normalisation pour comparaison avec le seuil
+        let light = get_light(*pixel); // Luminance du pixel
+        let new_pixel = if light > seuil {
+            WHITE // Appel à la constante WHITE
+        } else {
+            BLACK // Appel à la constante BLACK
+        };
+        *pixel = new_pixel;
     }
 
     let img_out = DynamicImage::ImageRgb8(img_out);
@@ -653,112 +637,15 @@ pub fn traitement_diffusion_erreur(
 }
 ```
 
-On obtient ce résultat
+Instruction :
 
-![error_diffusion_image_1](./exports/error_diffusion_1.png)
-
-### Question 17 
-
-Appliquer la diffusion d'erreur dans le cadre d'une image transformée à l'aide d'une palette de couleurs donnée :
-
-- pour chaque pixel de l'image, on détermine la couleur de la palette qui est la plus proche de la couleur réelle du pixel, avec la distance euclidienne .
-
-- Une fois la couleur la plus proche identifiée, on récupère l'erreur qui correspond à la différence entre la couleur réelle du pixel et la couleur approximative proche de la palette. 
-
-- propager l'erreur aux pixels pas traités avec une matrice de diffusion d'erreur. Par exemple, avec une matrice simple comme :
-
-$$
-\begin{bmatrix}
-* & 0.5 \\
-0.5 & 0
-\end{bmatrix}
-$$
-
--> 50% de l'erreur est transmise au pixel à droite.
-
--> 50% au pixel en dessous.
-
-### Question 16
-
-Nous développons tout d'abord une classe utilitaire `MatriceErreur` qui contiendra la matrice avec ses coefficients et sa taille.
-
-Cette classe sera passée en entrée du traitement, pour pouvoir l'appliquer avec plusieurs matrices différentes.
-
-Dans le cas présent, nous appliquons le traitement avec la matrice donnée : 
-
-$$
-\begin{bmatrix}
-* & 0.5 \\
-0.5 & 0
-\end{bmatrix}
-$$
-
-
-Méthode de traitement : 
-
-```rust
-/**
- * Applique le traitement de diffusion d'erreur sur l'image passée en paramètre.
- * Prend une matrice en entrée comme ça on définit celle qu'on veut
- * par exemple qst16 c'estune matrice avec des coeff 0.5 mais qst19 c'est matrice de Floyd-Steinberg
- */
-pub fn traitement_diffusion_erreur(
-    img: &DynamicImage,
-    path_out: String,
-    matrice_erreur: &MatriceErreur,
-) -> Result<(), ImageError> {
-    let (width, height) = img.dimensions();
-    let mut img_out: RgbImage = ImageBuffer::new(width, height);
-
-    // Convertir l'image en niveaux de gris
-    let mut luminances: Vec<Vec<f32>> = vec![vec![0.0; width as usize]; height as usize];
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgb();
-            luminances[y as usize][x as usize] = get_light(pixel) as f32 / 255.0;
-        }
-    }
-
-    // Parcourir chaque pixel
-    for y in 0..height as usize {
-        for x in 0..width as usize {
-            let old_luminance = luminances[y][x];
-            let new_luminance = if old_luminance > 0.5 { 1.0 } else { 0.0 };
-            let error = old_luminance - new_luminance;
-
-            // Définir la nouvelle couleur (noir ou blanc)
-            let new_pixel = if new_luminance == 1.0 {
-                image::Rgb([255, 255, 255])
-            } else {
-                image::Rgb([0, 0, 0])
-            };
-            img_out.put_pixel(x as u32, y as u32, new_pixel);
-
-            // Diffuser l'erreur aux voisins en utilisant la matrice d'erreur
-            for row in 0..matrice_erreur.matrix.len() {
-
-                for col in 0..matrice_erreur.matrix[row].len() {
-                    // par default le coefficient est la première valeur de la matrice
-                    let coefficient = matrice_erreur.get_value(row, col).unwrap_or(0.0);
-                    let nx = x as isize + col as isize - matrice_erreur.x_origin as isize;
-                    let ny = y as isize + row as isize;
-                    if coefficient != 0.0 && nx >= 0 && nx < width as isize && ny >= 0 && ny < height as isize {
-                        luminances[ny as usize][nx as usize] += error * coefficient as f32;
-                    }
-                }
-            }
-        }
-    }
-
-    // Convertir le buffer en DynamicImage et sauvegarder
-    let img_out = DynamicImage::ImageRgb8(img_out);
-    save(&img_out, path_out)
-}
+```bash
+cargo run -- ./imports/test.jpg ./exports/error_diffusion.png error_diffusion
 ```
 
 On obtient ce résultat
 
-![error_diffusion_image_1](./exports/error_diffusion_1.png)
+![error_diffusion_image](./exports/error_diffusion.png)
 
 ### Question 17 
 
@@ -777,10 +664,17 @@ $$
 \end{bmatrix}
 $$
 
--> 50% de l'erreur est transmise au pixel à droite.
+> 50% de l'erreur est transmise au pixel à droite.
 
--> 50% au pixel en dessous.
+> 50% au pixel en dessous.
 
+Instruction : 
+
+```bash
+cargo run -- ./imports/test.jpg ./exports/error_diffusion_colors.png error_diffusion_colors --couleur1 green --couleur2 blue
+```
+
+![error_diffusion_colors](./exports/error_diffusion_colors.png)
 
 ## Partie 7 - La bibliothèque ``argh``
 
@@ -812,10 +706,106 @@ Le type Rust correspondant à une sélection d'options fournies par l'utilisateu
 - `dithering`
 - `ordered_dithering`
 - `error_diffusion`
+- `error_diffusion_colors`
 
 ### Question 23
 
 _Implémenter votre interface en ligne de commande à l’aide de la directive
 #[derive(FromArgs)] sur votre type, suivant la documentation à [la doc](https://docs.rs/argh/0.1.13/argh/)_
 
-WIP @jordanlavenant
+```rust
+use argh::FromArgs;
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+/// Convertit une image en monochrome ou vers une palette réduite de couleurs.
+pub struct DitherArgs {
+    /// le fichier d’entrée
+    #[argh(positional)]
+    pub input: String,
+
+    /// le fichier de sortie (optionnel)
+    #[argh(positional)]
+    pub output: Option<String>,
+
+    /// le mode d’opération
+    #[argh(subcommand)]
+    pub mode: Mode,
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand)]
+pub enum Mode {
+    Seuil(OptsSeuil),
+    Palette(OptsPalette),
+    Pixel(OptsPixel),
+    SplitWhite(OptsSplitWhite),
+    Couleurs(OptsCouleurs),
+    Dithering(OptsDithering),
+    OrderedDithering(OptsOrderedDithering),
+    ErrorDiffusion(OptsErrorDiffusion),
+    ErrorDiffusionColors(OptsErrorDiffusionColors),
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "seuil")]
+/// Rendu de l’image par seuillage monochrome.
+pub struct OptsSeuil {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "palette")]
+/// Rendu de l’image avec une palette contenant un nombre limité de couleurs
+pub struct OptsPalette {
+    #[argh(option, description = "nombre de couleurs")]
+    pub n_couleurs: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "pixel")]
+/// Affiche la couleur du pixel à la position (x, y)
+pub struct OptsPixel {
+    #[argh(option, description = "position x")]
+    pub x: usize,
+    #[argh(option, description = "position y")]
+    pub y: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "split_white")]
+/// Rendu de l'image en alternant les pixels en blanc
+pub struct OptsSplitWhite {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "couleurs")]
+/// Rendu de l’image par seuillage avec des couleurs personnalisées.
+pub struct OptsCouleurs {
+    #[argh(option, description = "couleur 1")]
+    pub couleur1: String,
+    #[argh(option, description = "couleur 2")]
+    pub couleur2: String,
+}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "dithering")]
+/// Rendu de l’image par tramage aléatoire
+pub struct OptsDithering {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "ordered_dithering")]
+/// Rendu de l’image par tramage ordonné
+pub struct OptsOrderedDithering {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "error_diffusion")]
+/// Rendu de l’image par diffusion d’erreur
+pub struct OptsErrorDiffusion {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "error_diffusion_colors")]
+/// Rendu de l’image par diffusion d’erreur
+pub struct OptsErrorDiffusionColors {
+    #[argh(option, description = "couleur 1")]
+    pub couleur1: String,
+    #[argh(option, description = "couleur 2")]
+    pub couleur2: String,
+}
+```

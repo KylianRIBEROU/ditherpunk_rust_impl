@@ -15,9 +15,9 @@ use utils::get_pixel;
 use cli_arguments::{DitherArgs, Mode};
 use constantes::BAYER_MATRIX;
 use traitements::{
-    traitement_diffusion_erreur, traitement_dithering, traitement_monochrome,
-    traitement_ordered_dithering, traitement_paire_palette, traitement_palette,
-    traitement_split_white,
+    traitement_error_diffusion, traitement_error_diffusion_colors, 
+    traitement_dithering, traitement_monochrome, traitement_ordered_dithering, 
+    traitement_paire_palette, traitement_palette, traitement_split_white,
 };
 
 fn main() -> Result<(), ImageError> {
@@ -76,7 +76,6 @@ fn main() -> Result<(), ImageError> {
         }
         Mode::ErrorDiffusion(_) => {
             println!("Mode diffusion d'erreur");
-            //todo matrice
 
             let floyd_stenbeirg_matrice = MatriceErreur::new(
                 1,
@@ -93,7 +92,27 @@ fn main() -> Result<(), ImageError> {
                 ],
             );
 
-            traitement_diffusion_erreur(&img, path_out, &qst16_matrice)?;
+            traitement_error_diffusion(&img, path_out, &qst16_matrice)?;
+        }
+        Mode::ErrorDiffusionColors(opts) => {
+            println!("Mode diffusion d'erreur via la paire de couleur: {}, {}", opts.couleur1, opts.couleur2);
+
+            let floyd_stenbeirg_matrice = MatriceErreur::new(
+                1,
+                vec![
+                    vec![0.0, 0.0, 7.0 / 16.0],
+                    vec![3.0 / 16.0, 5.0 / 16.0, 1.0 / 16.0],
+                ],
+            );
+            let qst16_matrice = MatriceErreur::new(
+                0,
+                vec![
+                    vec![0.5], // Erreur diffusée à droite
+                    vec![0.5], // Erreur diffusée en bas
+                ],
+            );
+
+            traitement_error_diffusion_colors(&img, path_out, &qst16_matrice, opts.couleur1, opts.couleur2)?;
         }
     }
 

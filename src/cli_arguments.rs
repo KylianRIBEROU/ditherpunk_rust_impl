@@ -27,6 +27,7 @@ pub enum Mode {
     Dithering(OptsDithering),
     OrderedDithering(OptsOrderedDithering),
     ErrorDiffusion(OptsErrorDiffusion),
+    ErrorDiffusionColors(OptsErrorDiffusionColors),
 }
 
 #[derive(Debug, Clone, PartialEq, FromArgs)]
@@ -81,3 +82,13 @@ pub struct OptsOrderedDithering {}
 #[argh(subcommand, name = "error_diffusion")]
 /// Rendu de l’image par diffusion d’erreur
 pub struct OptsErrorDiffusion {}
+
+#[derive(Debug, Clone, PartialEq, FromArgs)]
+#[argh(subcommand, name = "error_diffusion_colors")]
+/// Rendu de l’image par diffusion d’erreur
+pub struct OptsErrorDiffusionColors {
+    #[argh(option, description = "couleur 1")]
+    pub couleur1: String,
+    #[argh(option, description = "couleur 2")]
+    pub couleur2: String,
+}
