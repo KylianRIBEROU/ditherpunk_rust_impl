@@ -811,6 +811,7 @@ Le type Rust correspondant à une sélection d'options fournies par l'utilisateu
 - `couleurs`
 - `dithering`
 - `ordered_dithering`
+- `error_diffusion`
 
 ### Question 23
 

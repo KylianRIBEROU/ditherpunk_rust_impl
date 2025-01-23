@@ -81,13 +81,12 @@ fn main() -> Result<(), ImageError> {
             let floyd_stenbeirg_matrice = MatriceErreur::new(
                 1,
                 vec![
-                    vec![0.0, 0.4375],    // Droite
-                    vec![0.1875, 0.3125], // Gauche-bas, bas
-                    vec![0.0625],         // Droite-bas
+                    vec![0.0, 0.0, 7.0 / 16.0],
+                    vec![3.0 / 16.0, 5.0 / 16.0, 1.0 / 16.0],
                 ],
             );
             let qst16_matrice = MatriceErreur::new(
-                0, // La position courante (le pixel à traiter) est dans la première colonne
+                0,
                 vec![
                     vec![0.5], // Erreur diffusée à droite
                     vec![0.5], // Erreur diffusée en bas
