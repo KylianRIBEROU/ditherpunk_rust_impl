@@ -189,7 +189,7 @@ Affichage de la couleur du pixel (32, 52) :
 
 
 ### Question 5
-
+&
 _Passer un pixel sur deux d’une image en blanc. Est-ce que l’image obtenue est reconnaissable?_
 
 Traitement : 
@@ -504,7 +504,7 @@ cargo run -- ./imports/test.jpg ./exports/dithering.png dithering
 
 ### Question 13
 
-!['q13'](assets/q13.png)
+!['question13'](assets/question13_enonce.png)
 
 _Déterminer 𝐵3._
 
@@ -575,3 +575,40 @@ cargo run -- ./imports/test.jpg ./exports/ordered_dithering.png ordered_ditherin
 _Pour une palette de couleurs comme dans la partie 3, expliquer dans votre README comment
 vous représentez l’erreur commise à chaque pixel, comment vous la diffusez._
 
+
+## Partie 7 - La bibliothèque ``argh``
+
+### Question 21
+
+_Donner une spécification de votre interface sous forme d’un projet d’écran d’aide, tel que celui qui sera obtenu par cargo run -- --help._
+
+
+Instruction pour afficher l'écran d'aide :
+
+```bash
+cargo run -- --help
+```
+
+
+![question21](assets/question21.png)
+
+### Question 22
+
+_Déterminer le type Rust correspondant à une sélection d’options fournies par l’utilisateur._
+
+Le type Rust correspondant à une sélection d'options fournies par l'utilisateur est un ``enum``, car il permet de représenter plusieurs choix distincts, chacun associé à des données spécifiques si nécessaire, comme :
+
+- `seuil`
+- `palette`
+- `pixel`
+- `split_white`
+- `couleurs`
+- `dithering`
+- `ordered_dithering`
+
+### Question 23
+
+_Implémenter votre interface en ligne de commande à l’aide de la directive
+#[derive(FromArgs)] sur votre type, suivant la documentation à [la doc](https://docs.rs/argh/0.1.13/argh/)_
+
+WIP @jordanlavenant
